@@ -1,6 +1,6 @@
 # Intelligent Interview Question Recommendation Engine
 
-Analyzes a candidate's **resume** against a **job description** and uses Claude to
+Analyzes a candidate's **resume** against a **job description** and uses an LLM to
 generate a structured, editable interview plan:
 
 - **Candidate strengths** relevant to the role
@@ -13,6 +13,8 @@ generate a structured, editable interview plan:
 
 The interviewer can **edit, approve, or reject** each question and export the
 approved set as Markdown.
+
+**Live demo:** _<add your Vercel URL here after deploying>_
 
 ---
 
@@ -85,14 +87,21 @@ Click **Load example** to try it with the sample resume/JD from the brief.
 
 ```
 app/
+  __init__.py
   main.py            FastAPI app: /api/generate, /api/extract-pdf, /api/health
-  llm.py             Provider-agnostic LLM layer (Gemini/Groq/Ollama/OpenAI/Anthropic)
+  llm.py             Provider-agnostic LLM layer + schema + dedup (Gemini/Groq/Ollama/OpenAI/Anthropic)
   static/
     index.html       UI
     styles.css       Styling (light + dark)
     app.js           Frontend logic (generate, edit/approve/reject, export)
-requirements.txt
-run.py               Launcher (uvicorn)
+api/
+  index.py           Vercel serverless entrypoint (exposes the FastAPI app)
+tests/
+  test_app.py        Automated tests (pytest)
+vercel.json          Vercel deployment config
+requirements.txt     Runtime dependencies
+requirements-dev.txt Test dependencies
+run.py               Local launcher (uvicorn)
 ```
 
 ## API
@@ -101,7 +110,74 @@ run.py               Launcher (uvicorn)
 | ------------------- | ------ | --------------------------------------------------- |
 | `/api/generate`     | POST   | `{resume, job_description, num_questions}` → plan    |
 | `/api/extract-pdf`  | POST   | Upload a resume PDF → extracted text                |
-| `/api/health`       | GET    | Reports whether `ANTHROPIC_API_KEY` is configured   |
+| `/api/health`       | GET    | Reports the active provider, model, and whether its key is set |
+
+## Testing
+
+Automated tests cover the deterministic logic (JSON extraction, normalization,
+duplicate detection) and the API endpoints (validation, error mapping, and a
+success path with the LLM call mocked). **No API key or network is needed** to run them.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+## Deployment (Vercel)
+
+The app is configured to deploy as a single Python serverless function on Vercel
+(`vercel.json` routes all requests to `api/index.py`, which serves both the API
+and the static UI).
+
+1. Push the repo to GitHub.
+2. On [vercel.com](https://vercel.com): **Add New → Project → import the repo**
+   (auto-detected as FastAPI).
+3. Add environment variables (**Settings → Environment Variables**), e.g.
+   `LLM_PROVIDER=groq` and `GROQ_API_KEY=...`.
+4. **Deploy.** Every push to `main` re-deploys automatically.
+
+> Free-tier notes: serverless functions cold-start after idle (a few extra seconds
+> on the first request) and have a ~10s execution limit — comfortably enough for a
+> fast provider like Groq.
+
+## Assumptions & Trade-offs
+
+**Assumptions**
+- Resume and job description are provided as **text** (or a text-based PDF). Scanned
+  image PDFs aren't OCR'd — the app tells the user when a PDF has no selectable text.
+- The interviewer is the user; there's no authentication or multi-user persistence —
+  a generated plan lives in the browser session until exported.
+- An LLM provider key is supplied via environment variables (never committed).
+
+**Trade-offs**
+- **Provider-agnostic over single-vendor.** The LLM layer targets any OpenAI-compatible
+  endpoint so you can use a free tier (Gemini/Groq) or run offline (Ollama). The cost is
+  that we validate JSON ourselves rather than relying on one vendor's native structured
+  output; a self-correction retry handles the rare malformed response.
+- **Prompt + code for the "no duplicates/irrelevant" rule.** Relevance is enforced via
+  the prompt (semantic judgment isn't reliable in plain code). Duplicates additionally
+  get a deterministic backstop: a conservative content-word similarity check
+  (`dedupe_questions`, Jaccard ≥ 0.7) drops near-identical questions. It runs *after*
+  generation, so the guarantee is "no duplicates," not "always exactly N questions."
+- **No database.** Plans aren't persisted server-side — simpler to run and deploy, at the
+  cost of no history. Export-to-Markdown covers the "save the result" need.
+- **Single serverless function on Vercel.** The whole app (API + static) ships as one
+  function for deployment simplicity, rather than splitting static hosting from the API.
+- **Stateless generation.** Each request is independent (no fine-tuning/embeddings),
+  keeping the system easy to reason about and cheap to run.
+
+## AI Tools Used
+
+- **LLM at runtime** — the core feature. The app sends the resume + job description to an
+  LLM (default Google Gemini; also Groq, Ollama, OpenAI, or Anthropic) and asks for a
+  structured interview plan. Prompt engineering (`SYSTEM_PROMPT` in `app/llm.py`) steers
+  the model to identify strengths/gaps, balance question categories and difficulty, write
+  rubric-style answer points, and avoid duplicate/irrelevant questions. The response is
+  validated against a Pydantic schema.
+- **Claude (Anthropic) as a coding assistant** — this project was built with AI pair
+  programming. It was used to scaffold the FastAPI backend and UI, design the
+  provider-agnostic LLM layer, write the automated tests, and produce the Vercel
+  deployment config, with iterative review and manual verification of each step.
 
 ## Notes
 
