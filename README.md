@@ -14,7 +14,7 @@ generate a structured, editable interview plan:
 The interviewer can **edit, approve, or reject** each question and export the
 approved set as Markdown.
 
-**Live demo:** _<add your Vercel URL here after deploying>_
+**Live demo:** https://interview-question-recommendation-e.vercel.app/
 
 ---
 
