@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interview Question Recommendation Engine</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🎯</span>
+      <div>
+        <h1>Interview Question Recommendation Engine</h1>
+        <p class="tagline">Turn a resume + job description into a structured, editable interview plan.</p>
+      </div>
+    </div>
+    <div id="status-pill" class="status-pill" title="Backend status">checking…</div>
+  </header>
+
+  <main class="layout">
+    <!-- Input panel -->
+    <section class="panel input-panel">
+      <h2 class="panel-title">Inputs</h2>
+
+      <label class="field">
+        <span class="field-label">
+          Candidate Resume
+          <span class="field-actions">
+            <input type="file" id="pdf-input" accept="application/pdf" hidden />
+            <button type="button" id="pdf-btn" class="link-btn">Upload PDF</button>
+          </span>
+        </span>
+        <textarea id="resume" rows="12" placeholder="Paste the candidate's resume, or skills & experience…&#10;&#10;e.g. Python, Django, PostgreSQL, REST APIs, 2 years backend development"></textarea>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Job Description</span>
+        <textarea id="jd" rows="10" placeholder="Paste the job description or required skills…&#10;&#10;e.g. Python, Django, PostgreSQL, Docker, Redis, background processing with Celery"></textarea>
+      </label>
+
+      <div class="controls-row">
+        <label class="inline-field">
+          <span>Questions</span>
+          <select id="num-questions">
+            <option>5</option>
+            <option selected>8</option>
+            <option>10</option>
+            <option>12</option>
+          </select>
+        </label>
+        <button type="button" id="sample-btn" class="ghost-btn">Load example</button>
+        <button type="button" id="generate-btn" class="primary-btn">Generate Plan</button>
+      </div>
+
+      <p id="error-box" class="error-box" hidden></p>
+    </section>
+
+    <!-- Results panel -->
+    <section class="panel results-panel">
+      <div class="results-head">
+        <h2 class="panel-title">Interview Plan</h2>
+        <div id="result-actions" class="result-actions" hidden>
+          <span id="approval-summary" class="approval-summary"></span>
+          <button type="button" id="copy-btn" class="ghost-btn">Copy Approved</button>
+          <button type="button" id="export-btn" class="ghost-btn">Export .md</button>
+        </div>
+      </div>
+
+      <div id="empty-state" class="empty-state">
+        <div class="empty-illustration">📝</div>
+        <p>Your generated interview plan will appear here.</p>
+        <p class="muted">Add a resume and job description, then click <strong>Generate Plan</strong>.</p>
+      </div>
+
+      <div id="loading-state" class="loading-state" hidden>
+        <div class="dots"><span></span><span></span><span></span></div>
+        <p>Analyzing resume against job description…</p>
+        <p class="muted">Identifying strengths, gaps, and tailored questions.</p>
+      </div>
+
+      <div id="plan" class="plan" hidden>
+        <div class="summary-grid">
+          <div class="summary-card strengths">
+            <h3>✅ Candidate Strengths</h3>
+            <ul id="strengths-list"></ul>
+          </div>
+          <div class="summary-card gaps">
+            <h3>🔍 Skills to Validate</h3>
+            <ul id="gaps-list"></ul>
+          </div>
+        </div>
+
+        <div class="questions-head">
+          <h3>Recommended Questions</h3>
+          <div class="filter-row" id="difficulty-filter">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="Easy">Easy</button>
+            <button class="chip" data-filter="Medium">Medium</button>
+            <button class="chip" data-filter="Hard">Hard</button>
+          </div>
+        </div>
+
+        <div id="questions-list" class="questions-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Provider is configurable (Gemini · Groq · Ollama · OpenAI) · Interviewer can edit, approve, or reject each question.
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
